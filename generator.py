@@ -7,6 +7,7 @@ import pdb
 import math
 import torch.nn.init as init
 
+PAD_IDX = 0
 
 class Generator(nn.Module):
 
@@ -18,7 +19,7 @@ class Generator(nn.Module):
         self.vocab_size = vocab_size
         self.gpu = gpu
 
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
         self.gru = nn.GRU(embedding_dim, hidden_dim)
         self.gru2out = nn.Linear(hidden_dim, vocab_size)
 
@@ -60,7 +61,6 @@ class Generator(nn.Module):
 
         h = self.init_hidden(num_samples)
         inp = autograd.Variable(torch.LongTensor([start_letter]*num_samples))
-
         if self.gpu:
             samples = samples.cuda()
             inp = inp.cuda()

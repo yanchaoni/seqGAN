@@ -1,8 +1,9 @@
+import numpy as np
 import torch
-from torch.autograd import Variable
+import torch.autograd as autograd
 from math import ceil
 
-def prepare_generator_batch(samples, start_letter=0, gpu=False):
+def prepare_generator_batch(samples, start_letter=None, gpu=False):
     """
     Takes samples (a batch) and returns
 
@@ -14,24 +15,41 @@ def prepare_generator_batch(samples, start_letter=0, gpu=False):
         - target: batch_size x seq_len (Variable same as samples)
     """
 
-    batch_size, seq_len = samples.size()
-
-    inp = torch.zeros(batch_size, seq_len)
-    target = samples
-    inp[:, 0] = start_letter
-    inp[:, 1:] = target[:, :seq_len-1]
-
-    inp = Variable(inp).type(torch.LongTensor)
-    target = Variable(target).type(torch.LongTensor)
-
+    batch_size, seq_len = len(samples), len(samples[0])
+    lengths = [len(sent) for sent in samples]
+    
+    inp = np.zeros((batch_size, 1+seq_len)) # start + seq
+    target = np.zeros((batch_size, seq_len+1)) # seq + pad(eos)
+    if start_letter is not None:
+        inp[:, 0] = start_letter
+    else:
+        inp[:, 0] = torch.randn(batch_size)
+    
+    for b in range(batch_size):
+        inp[b, 1:lengths[b]+1] = samples[b]
+        target[b, :lengths[b]] = samples[b]
+    
+    inp = torch.LongTensor(inp)
+    target = torch.LongTensor(target)    
+#     lengths = torch.LongTensor(lengths)
     if gpu:
         inp = inp.cuda()
         target = target.cuda()
+#         lengths = lengths.cuda()
 
     return inp, target
 
+def prepare_real_samples(pos_samples, max_seq_len, gpu=False):
+    batch_size = len(pos_samples)
+    data = np.zeros((batch_size, max_seq_len))
+    for b in range(batch_size):
+        data[b, :len(pos_samples[b])] = pos_samples[b]
+    data = torch.LongTensor(data)
+    if gpu:
+        data = data.cuda()
+    return data
 
-def prepare_discriminator_data(pos_samples, neg_samples, gpu=False):
+def prepare_discriminator_data(pos_samples, neg_samples, max_seq_len, gpu=False):
     """
     Takes positive (target) samples, negative (generator) samples and prepares inp and target data for discriminator.
 
@@ -43,8 +61,8 @@ def prepare_discriminator_data(pos_samples, neg_samples, gpu=False):
         - inp: (pos_size + neg_size) x seq_len
         - target: pos_size + neg_size (boolean 1/0)
     """
-
-    inp = torch.cat((pos_samples, neg_samples), 0).type(torch.LongTensor)
+    pos_samples = prepare_real_samples(pos_samples, max_seq_len, gpu)
+    inp = torch.cat((pos_samples, neg_samples), dim=0).type(torch.LongTensor)
     target = torch.ones(pos_samples.size()[0] + neg_samples.size()[0])
     target[pos_samples.size()[0]:] = 0
 
@@ -53,8 +71,8 @@ def prepare_discriminator_data(pos_samples, neg_samples, gpu=False):
     target = target[perm]
     inp = inp[perm]
 
-    inp = Variable(inp)
-    target = Variable(target)
+    inp = autograd.Variable(inp)
+    target = autograd.Variable(target)
 
     if gpu:
         inp = inp.cuda()
@@ -73,7 +91,7 @@ def batchwise_sample(gen, num_samples, batch_size):
     for i in range(int(ceil(num_samples/float(batch_size)))):
         samples.append(gen.sample(batch_size))
 
-    return torch.cat(samples, 0)[:num_samples]
+    return torch.cat(samples, dim=0)[:num_samples]
 
 
 def batchwise_oracle_nll(gen, oracle, num_samples, batch_size, max_seq_len, start_letter=0, gpu=False):
