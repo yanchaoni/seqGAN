@@ -15,8 +15,9 @@ def prepare_generator_batch(samples, start_letter=None, gpu=False):
         - target: batch_size x seq_len (Variable same as samples)
     """
 
-    batch_size, seq_len = len(samples), len(samples[0])
+    batch_size = len(samples)
     lengths = [len(sent) for sent in samples]
+    seq_len = max(lengths)
     
     inp = np.zeros((batch_size, 1+seq_len)) # start + seq
     target = np.zeros((batch_size, seq_len+1)) # seq + pad(eos)

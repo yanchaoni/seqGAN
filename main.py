@@ -17,9 +17,9 @@ import helpers
 PAD_IDX = 0
 
 CUDA = True
-VOCAB_SIZE = 70115
+VOCAB_SIZE = 70116
 MAX_SEQ_LEN = 40
-START_LETTER = 0
+START_LETTER = 70115
 BATCH_SIZE = 32
 MLE_TRAIN_EPOCHS = 100
 ADV_TRAIN_EPOCHS = 50
@@ -42,7 +42,7 @@ def train_generator_MLE(gen, gen_opt, real_data_samples, epochs):
         print('epoch %d : ' % (epoch + 1), end='')
         sys.stdout.flush()
         total_loss = 0
-
+        random.shuffle(real_data_samples)
         for i in range(0, len(real_data_samples), BATCH_SIZE):
             batch_data = real_data_samples[i:i + BATCH_SIZE]
 #             start_letter = torch.randn(len(batch_data))
@@ -51,6 +51,7 @@ def train_generator_MLE(gen, gen_opt, real_data_samples, epochs):
             gen_opt.zero_grad()
             loss = gen.batchNLLLoss(inp, target)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(gen.parameters(), 3)
             gen_opt.step()
 
             total_loss += loss.data.item()
@@ -80,6 +81,7 @@ def train_generator_PG(gen, gen_opt, dis, num_batches):
         gen_opt.zero_grad()
         pg_loss = gen.batchPGLoss(inp, target, rewards)
         pg_loss.backward()
+        torch.nn.utils.clip_grad_norm_(gen.parameters(), 3)
         gen_opt.step()
 
     print(' pg_loss = %.4f' % pg_loss)
@@ -112,6 +114,7 @@ def train_discriminator(discriminator, dis_opt, real_data_samples, generator, d_
                 loss_fn = nn.BCELoss()
                 loss = loss_fn(out, target)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(dis.parameters(), 3)
                 dis_opt.step()
 
                 total_loss += loss.data.item()
@@ -147,15 +150,15 @@ if __name__ == '__main__':
     # GENERATOR MLE TRAINING
     print('Starting Generator MLE Training...')
     gen_optimizer = optim.Adam(gen.parameters(), lr=3e-3)
-    train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
+#     train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
 
-    torch.save(gen.state_dict(), 'gen.ckpt')
-    # gen.load_state_dict(torch.load(pretrained_gen_path))
+#     torch.save(gen.state_dict(), 'gen.ckpt')
+    gen.load_state_dict(torch.load('gen.ckpt'))
 
     # PRETRAIN DISCRIMINATOR
     print('\nStarting Discriminator Training...')
     dis_optimizer = optim.Adagrad(dis.parameters())
-#     train_discriminator(dis, dis_optimizer, idx_data, gen, 50, 3)
+    train_discriminator(dis, dis_optimizer, idx_data, gen, 50, 3)
 
     torch.save(dis.state_dict(), 'dis.ckpt')
     # dis.load_state_dict(torch.load(pretrained_dis_path))
@@ -173,6 +176,6 @@ if __name__ == '__main__':
         # TRAIN DISCRIMINATOR
         print('\nAdversarial Training Discriminator : ')
         train_discriminator(dis, dis_optimizer, idx_data, gen, 5, 3)
-        
+
     torch.save(gen.state_dict(), 'gen.ckpt')
     torch.save(dis.state_dict(), 'dis.ckpt')
