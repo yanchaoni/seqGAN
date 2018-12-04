@@ -19,8 +19,8 @@ def prepare_generator_batch(samples, start_letter=None, gpu=False):
     lengths = [len(sent) for sent in samples]
     seq_len = max(lengths)
     
-    inp = np.zeros((batch_size, 1+seq_len)) # start + seq
-    target = np.zeros((batch_size, seq_len+1)) # seq + pad(eos)
+    inp = np.ones((batch_size, 1+seq_len)) # start + seq
+    target = np.ones((batch_size, seq_len+1)) # seq + pad(eos)
     if start_letter is not None:
         inp[:, 0] = start_letter
     else:
@@ -42,7 +42,7 @@ def prepare_generator_batch(samples, start_letter=None, gpu=False):
 
 def prepare_real_samples(pos_samples, max_seq_len, gpu=False):
     batch_size = len(pos_samples)
-    data = np.zeros((batch_size, max_seq_len))
+    data = np.ones((batch_size, max_seq_len))
     for b in range(batch_size):
         data[b, :len(pos_samples[b])] = pos_samples[b]
     data = torch.LongTensor(data)
