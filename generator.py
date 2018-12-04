@@ -7,20 +7,21 @@ import pdb
 import math
 import torch.nn.init as init
 
-PAD_IDX = 0
+PAD_IDX = 1
 
 class Generator(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, max_seq_len, gpu=False, oracle_init=False):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, max_seq_len, num_layers, gpu=False, oracle_init=False):
         super(Generator, self).__init__()
         self.hidden_dim = hidden_dim
         self.embedding_dim = embedding_dim
         self.max_seq_len = max_seq_len
         self.vocab_size = vocab_size
+        self.num_layers = num_layers
         self.gpu = gpu
 
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.gru = nn.GRU(embedding_dim, hidden_dim)
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=1)
+        self.gru = nn.GRU(embedding_dim, hidden_dim, num_layers=num_layers)
         self.gru2out = nn.Linear(hidden_dim, vocab_size)
 
         # initialise oracle network with N(0,1)
@@ -30,7 +31,7 @@ class Generator(nn.Module):
                 init.normal(p, 0, 1)
 
     def init_hidden(self, batch_size=1):
-        h = autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim))
+        h = autograd.Variable(torch.zeros(self.num_layers, batch_size, self.hidden_dim))
 
         if self.gpu:
             return h.cuda()

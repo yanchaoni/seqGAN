@@ -14,14 +14,15 @@ import generator
 import discriminator
 import helpers
 
-PAD_IDX = 0
+PAD_IDX = 1
 
 CUDA = True
-VOCAB_SIZE = 70116
-MAX_SEQ_LEN = 40
-START_LETTER = 70115
+gen_num_layers = 2
+
+MAX_SEQ_LEN = 20
+START_LETTER = 0
 BATCH_SIZE = 32
-MLE_TRAIN_EPOCHS = 100
+MLE_TRAIN_EPOCHS = 20
 ADV_TRAIN_EPOCHS = 50
 POS_NEG_SAMPLES = 10000
 
@@ -138,11 +139,12 @@ def train_discriminator(discriminator, dis_opt, real_data_samples, generator, d_
 # How do we actually sample? Simply use gen.sample?
 # +++++++++++++++++++++++++++++++++ #
 if __name__ == '__main__':
-    [idx_data, token_dataset, token2id, id2token] = pkl.load(open("jokes_with_punc.pkl", "rb"))
-
-    gen = generator.Generator(GEN_EMBEDDING_DIM, GEN_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gpu=CUDA)
+    [idx_data, token_dataset, token2id, id2token] = pkl.load(open("short_jokes.pkl", "rb"))
+    VOCAB_SIZE = len(id2token)
+    gen = generator.Generator(GEN_EMBEDDING_DIM, GEN_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gen_num_layers, gpu=CUDA)
     dis = discriminator.Discriminator(DIS_EMBEDDING_DIM, DIS_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gpu=CUDA)
-
+    print(gen)
+    print(dis)
     if CUDA:
         gen = gen.cuda()
         dis = dis.cuda()
@@ -150,15 +152,15 @@ if __name__ == '__main__':
     # GENERATOR MLE TRAINING
     print('Starting Generator MLE Training...')
     gen_optimizer = optim.Adam(gen.parameters(), lr=3e-3)
-#     train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
+    train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
 
-#     torch.save(gen.state_dict(), 'gen.ckpt')
-    gen.load_state_dict(torch.load('gen.ckpt'))
+    torch.save(gen.state_dict(), 'gen.ckpt')
+#     gen.load_state_dict(torch.load('gen.ckpt'))
 
     # PRETRAIN DISCRIMINATOR
     print('\nStarting Discriminator Training...')
     dis_optimizer = optim.Adagrad(dis.parameters())
-    train_discriminator(dis, dis_optimizer, idx_data, gen, 50, 3)
+    train_discriminator(dis, dis_optimizer, idx_data, gen, 20, 3)
 
     torch.save(dis.state_dict(), 'dis.ckpt')
     # dis.load_state_dict(torch.load(pretrained_dis_path))
@@ -171,7 +173,7 @@ if __name__ == '__main__':
         # TRAIN GENERATOR
         print('\nAdversarial Training Generator : ', end='')
         sys.stdout.flush()
-        train_generator_PG(gen, gen_optimizer, dis, 1)
+        train_generator_PG(gen, gen_optimizer, dis, 2)
 
         # TRAIN DISCRIMINATOR
         print('\nAdversarial Training Discriminator : ')
