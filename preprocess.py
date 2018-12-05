@@ -26,7 +26,7 @@ def tokenize_dataset(tokenizer, dataset, punctuations, gram=1):
         tokens = tokenize(tokenizer, sample, punctuations)
         if tokens is None:
             continue
-        if (len(tokens) <= 20) and (sum(len(w)<2 for w in tokens) <= len(tokens)/3):
+        if (len(tokens) <= 40) and (sum(len(w)<2 for w in tokens) <= len(tokens)/3):
             token_dataset.append(tokens)
             all_tokens.extend(tokens)
     return token_dataset, all_tokens
@@ -60,5 +60,6 @@ with open(fpath) as f:
 token_dataset, all_tokens = tokenize_dataset(tokenizer, jokes, punctuations)
 token2id, id2token = build_vocab(all_tokens)
 idx_data = token2index_dataset(token_dataset)
+print("length of dataset: ", len(id2token))
 import pickle as pkl
-pkl.dump([idx_data, token_dataset, token2id, id2token], open("short_jokes.pkl", "wb"))
+pkl.dump([idx_data, token_dataset, token2id, id2token], open("short_jokes-40.pkl", "wb"))

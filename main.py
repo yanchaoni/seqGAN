@@ -19,12 +19,11 @@ PAD_IDX = 1
 CUDA = True
 gen_num_layers = 2
 
-MAX_SEQ_LEN = 20
+MAX_SEQ_LEN = 40
 START_LETTER = 0
 BATCH_SIZE = 32
-MLE_TRAIN_EPOCHS = 20
-ADV_TRAIN_EPOCHS = 50
-POS_NEG_SAMPLES = 10000
+MLE_TRAIN_EPOCHS = 30
+ADV_TRAIN_EPOCHS = 30
 
 GEN_EMBEDDING_DIM = 100
 GEN_HIDDEN_DIM = 256
@@ -139,7 +138,8 @@ def train_discriminator(discriminator, dis_opt, real_data_samples, generator, d_
 # How do we actually sample? Simply use gen.sample?
 # +++++++++++++++++++++++++++++++++ #
 if __name__ == '__main__':
-    [idx_data, token_dataset, token2id, id2token] = pkl.load(open("short_jokes.pkl", "rb"))
+    [idx_data, token_dataset, token2id, id2token] = pkl.load(open("short_jokes-40.pkl", "rb"))
+    POS_NEG_SAMPLES = len(idx_data)
     VOCAB_SIZE = len(id2token)
     gen = generator.Generator(GEN_EMBEDDING_DIM, GEN_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gen_num_layers, gpu=CUDA)
     dis = discriminator.Discriminator(DIS_EMBEDDING_DIM, DIS_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gpu=CUDA)
@@ -151,11 +151,11 @@ if __name__ == '__main__':
 
     # GENERATOR MLE TRAINING
     print('Starting Generator MLE Training...')
-    gen_optimizer = optim.Adam(gen.parameters(), lr=3e-3)
-    train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
+    gen_optimizer = optim.Adam(gen.parameters(), lr=3e-4)
+#     train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
 
-    torch.save(gen.state_dict(), 'gen.ckpt')
-#     gen.load_state_dict(torch.load('gen.ckpt'))
+#     torch.save(gen.state_dict(), 'gen.ckpt')
+    gen.load_state_dict(torch.load('gen.ckpt'))
 
     # PRETRAIN DISCRIMINATOR
     print('\nStarting Discriminator Training...')
@@ -173,7 +173,7 @@ if __name__ == '__main__':
         # TRAIN GENERATOR
         print('\nAdversarial Training Generator : ', end='')
         sys.stdout.flush()
-        train_generator_PG(gen, gen_optimizer, dis, 2)
+        train_generator_PG(gen, gen_optimizer, dis, 3)
 
         # TRAIN DISCRIMINATOR
         print('\nAdversarial Training Discriminator : ')
