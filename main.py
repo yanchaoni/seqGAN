@@ -27,6 +27,8 @@ ADV_TRAIN_EPOCHS = 30
 
 GEN_EMBEDDING_DIM = 100
 GEN_HIDDEN_DIM = 256
+
+DIS_NET = "CNN"
 DIS_EMBEDDING_DIM = 100
 DIS_HIDDEN_DIM = 256
 
@@ -64,7 +66,7 @@ def train_generator_MLE(gen, gen_opt, real_data_samples, epochs):
         # each loss in a batch is loss per sample
         total_loss = total_loss / ceil(POS_NEG_SAMPLES / float(BATCH_SIZE)) / MAX_SEQ_LEN
 
-        print(' average_train_NLL = %.4f' % (total_loss))
+        print('[%d] average_train_NLL = %.4f' % (len(real_data_samples), total_loss))
 
 
 def train_generator_PG(gen, gen_opt, dis, num_batches):
@@ -142,7 +144,7 @@ if __name__ == '__main__':
     POS_NEG_SAMPLES = len(idx_data)
     VOCAB_SIZE = len(id2token)
     gen = generator.Generator(GEN_EMBEDDING_DIM, GEN_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gen_num_layers, gpu=CUDA)
-    dis = discriminator.Discriminator(DIS_EMBEDDING_DIM, DIS_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gpu=CUDA)
+    dis = discriminator.Discriminator(DIS_EMBEDDING_DIM, DIS_HIDDEN_DIM, VOCAB_SIZE, MAX_SEQ_LEN, gpu=CUDA, net=DIS_NET)
     print(gen)
     print(dis)
     if CUDA:
@@ -152,17 +154,17 @@ if __name__ == '__main__':
     # GENERATOR MLE TRAINING
     print('Starting Generator MLE Training...')
     gen_optimizer = optim.Adam(gen.parameters(), lr=3e-4)
-#     train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
+    train_generator_MLE(gen, gen_optimizer, idx_data, MLE_TRAIN_EPOCHS)
 
-#     torch.save(gen.state_dict(), 'gen.ckpt')
-    gen.load_state_dict(torch.load('gen.ckpt'))
+    torch.save(gen.state_dict(), 'gen-40-MLE.ckpt')
+#     gen.load_state_dict(torch.load('gen.ckpt'))
 
     # PRETRAIN DISCRIMINATOR
     print('\nStarting Discriminator Training...')
     dis_optimizer = optim.Adagrad(dis.parameters())
     train_discriminator(dis, dis_optimizer, idx_data, gen, 20, 3)
 
-    torch.save(dis.state_dict(), 'dis.ckpt')
+    torch.save(dis.state_dict(), 'dis-CNN.ckpt')
     # dis.load_state_dict(torch.load(pretrained_dis_path))
 
     # ADVERSARIAL TRAINING
@@ -179,5 +181,5 @@ if __name__ == '__main__':
         print('\nAdversarial Training Discriminator : ')
         train_discriminator(dis, dis_optimizer, idx_data, gen, 5, 3)
 
-    torch.save(gen.state_dict(), 'gen.ckpt')
+    torch.save(gen.state_dict(), 'gen-40-GAN.ckpt')
     torch.save(dis.state_dict(), 'dis.ckpt')
