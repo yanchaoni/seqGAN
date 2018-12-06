@@ -5,14 +5,15 @@ import pdb
 
 class Discriminator(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, max_seq_len, gpu=False, dropout=0.2):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, max_seq_len, gpu=False, dropout=0.2, net="RNN"):
         super(Discriminator, self).__init__()
         self.hidden_dim = hidden_dim
         self.embedding_dim = embedding_dim
         self.max_seq_len = max_seq_len
         self.gpu = gpu
 
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=1)
+        
         self.gru = nn.GRU(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=dropout)
         self.gru2hidden = nn.Linear(2*2*hidden_dim, hidden_dim)
         self.dropout_linear = nn.Dropout(p=dropout)
